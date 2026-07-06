@@ -29,24 +29,35 @@
 
 求职场景天然适合多 Agent 协作：一份简历投不同岗位需要不同的优化策略，而候选人往往说不清自己"缺什么"。CareerCraft 把求职辅导拆成 4 个独立的认知任务，每个 Agent 只做一件事：
 
+```mermaid
+flowchart TD
+    START([START]) --> RQ[requirement_node<br/>求职顾问]
+    RQ --> |"route_after_requirement"| ROUTER1{ }
+    ROUTER1 -->|"is_complete 或 没问题"| ARCH[architect_node<br/>简历优化师]
+    ROUTER1 -->|"不完整 + 有问题<br/>score < 0.6"| HUMAN[human_node<br/>等你回答]
+    HUMAN --> |"route_after_human"| ROUTER2{ }
+    ROUTER2 -->|"rounds < 3"| RQ
+    ROUTER2 -->|"rounds >= 3"| ARCH
+
+    ARCH --> REVIEW[review_node<br/>简历审查员]
+    REVIEW -->|"route_after_review<br/>永远 →"| PROMPT[prompt_node<br/>求职策略]
+    PROMPT --> EXPORT[export_node]
+    EXPORT --> END([END])
+
+    style HUMAN fill:#fff3cd,stroke:#ffc107
+    style RQ fill:#e3f2fd,stroke:#2196f3
+    style ARCH fill:#e8f5e9,stroke:#4caf50
+    style REVIEW fill:#fce4ec,stroke:#e91e63
+    style PROMPT fill:#f3e5f5,stroke:#9c27b0
 ```
-简历 PDF + 岗位 JD
-    │
-    ▼
-求职顾问 ──→ 追问 1-3 轮（Human-in-the-loop）
-    │
-    ▼
-简历优化师 ──→ STAR 重写 + 量化
-    │
-    ▼
-简历审查员 ──→ 风险提示（不自动修正，人做最终决策）
-    │
-    ▼
-求职策略 ──→ 能力差距分析
-    │
-    ▼
-导出 Markdown + PDF
-```
+
+| 颜色 | 节点 | 调 LLM？ | 说明 |
+|------|------|----------|------|
+| 🟡 | `human_node` | ❌ | interrupt() 暂停等用户输入 |
+| 🔵 | `requirement_node` | ✅ | 匹配评分、追问、多 JD 排名 |
+| 🟢 | `architect_node` | ✅ | STAR 重写、量化数据、硬数据保护 |
+| 🔴 | `review_node` | ✅ | 真实性/ATS/措辞审查 → 风险提示 |
+| 🟣 | `prompt_node` | ✅ | 能力差距分析 P0/P1/P2 |
 
 ## 架构设计
 
