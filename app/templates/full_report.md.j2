@@ -1,0 +1,60 @@
+# AI Career Coach — 完整求职辅导报告
+
+> 由 AI Career Coach（基于 LangGraph 多 Agent 系统）自动生成
+> 生成时间: {{ generation_time }} | 简历匹配度: {{ "%.0f"|format(match_score * 100) }}%
+
+---
+
+## 目录
+
+1. 候选人画像与岗位匹配
+2. 优化后的简历
+3. 审查风险提示
+4. 能力提升建议
+
+---
+
+# 一、候选人画像与岗位匹配
+
+{{ candidate_profile }}
+
+---
+
+# 二、优化后的简历
+
+## 个人摘要
+{{ personal_summary }}
+
+## 专业技能
+{{ skills_matrix }}
+
+## 工作/项目经历
+{{ work_experience }}
+
+## 教育背景
+{{ education }}
+
+## 附加亮点
+{{ additional_highlights }}
+
+---
+
+# 三、审查风险提示
+
+> ⚠️ 以下风险不影响报告输出，但建议投递前关注。
+
+{% if review_feedback %}
+{{ review_feedback }}
+{% else %}
+✅ 审查通过，未发现明显风险。
+{% endif %}
+
+---
+
+# 四、能力提升建议
+
+{{ growth_plan }}
+
+---
+
+*本报告由 AI Career Coach（基于 LangGraph 多 Agent 系统）自动生成*
