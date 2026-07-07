@@ -41,6 +41,8 @@ def create_llm(settings: Settings | None = None, **kwargs) -> ChatOpenAI:
         "api_key": api_key,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "request_timeout": 120,  # 单次请求 2 分钟超时
+        "max_retries": 2,        # 失败自动重试 2 次
         **kwargs,
     }
 

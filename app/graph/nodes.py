@@ -154,6 +154,56 @@ def human_node(state: AgentState) -> dict[str, Any]:
     }
 
 
+def _validate_hard_data(raw_text: str, optimized: dict[str, str]) -> list[str]:
+    """验证优化后简历中的硬数据是否与原始一致。
+
+    检测项：日期格式、公司名、学校名、邮箱。返回被篡改的告警列表。
+    """
+    import re
+
+    warnings = []
+    # 从简历原文中提取硬数据（取 ## 候选人简历 之后的部分）
+    resume_part = raw_text.split("## 目标岗位描述")[0] if "## 目标岗位描述" in raw_text else raw_text
+    resume_part = resume_part.replace("## 候选人简历\n", "").strip()
+
+    # 1. 日期校验：提取原文中的日期模式
+    patterns = [r"\d{4}[.年]\d{1,2}[月]?", r"\d{4}[.年-]\d{1,2}[月]?\s*[-~—至到]\s*\d{4}[.年-]?\d{0,2}[月]?", r"\d{4}\.\d{1,2}"]
+    original_dates = set()
+    for pat in patterns:
+        for m in re.finditer(pat, resume_part):
+            original_dates.add(m.group())
+
+    # 2. 公司和学校名提取：常见后缀
+    company_patterns = [r"[一-鿿]{2,20}(?:公司|有限|集团|科技|技术|软件|信息|股份|电子|电气|自动化|新能源|设备|光电|通信|网络)", r"[一-鿿]{2,20}(?:大学|学院|学校)"]
+    original_entities = set()
+    for pat in company_patterns:
+        for m in re.finditer(pat, resume_part):
+            original_entities.add(m.group())
+
+    # 3. 邮箱校验
+    emails = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", resume_part)
+    original_entities.update(emails)
+
+    # 4. 电话校验
+    phones = re.findall(r"1[3-9]\d{9}", resume_part)
+    original_entities.update(phones)
+
+    # 拼接所有优化后文本
+    optimized_text = " ".join(optimized.values())
+
+    # 检查日期
+    for d in original_dates:
+        if d not in optimized_text:
+            warnings.append(f"日期 '{d}' 在优化后丢失或被改写")
+
+    # 检查实体
+    for e in original_entities:
+        if e not in optimized_text:
+            warnings.append(f"'{e}' 在优化后丢失或被改写")
+
+    return warnings
+
+
 def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
     """简历优化师节点 —— 基于完整画像生成优化后的简历。"""
     agent = ResumeOptimizerAgent(llm)
@@ -180,7 +230,14 @@ def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
         "additional_highlights": result.additional_highlights,
     }
 
-    logger.info("[optimizer_node] Resume optimized")
+    # 硬数据防篡改：检查优化后是否保留了原文关键数据
+    hard_data_warnings = _validate_hard_data(raw_requirement, architecture)
+    if hard_data_warnings:
+        for w in hard_data_warnings:
+            logger.warning(f"[optimizer_node] 硬数据校验失败: {w}")
+
+    logger.info("[optimizer_node] Resume optimized"
+                + (f" (硬数据告警: {len(hard_data_warnings)} 处)" if hard_data_warnings else ""))
 
     return {
         "architecture": architecture,
@@ -215,9 +272,7 @@ def review_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
         + [f"- 建议: {s}" for s in result.suggestions]
     )
 
-    logger.info(
-        f"[review_node] passed={result.passed}, score={result.score:.2f}"
-    )
+    logger.info(f"[review_node] issues={len(result.issues)}, suggestions={len(result.suggestions)}")
 
     return {
         "review_feedback": feedback_text,

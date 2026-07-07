@@ -224,14 +224,9 @@ class CLIHandlers:
         )
 
     def display_questions(self, questions: list[str]) -> str:
-        """Display clarification questions and collect candidate answers.
+        """展示追问问题并收集候选人回答。5 分钟无输入自动跳过。"""
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
-        Args:
-            questions: List of questions from the Career Advisor Agent.
-
-        Returns:
-            The candidate's combined answers.
-        """
         console.print()
         console.print(
             Panel.fit(
@@ -245,19 +240,31 @@ class CLIHandlers:
 
         console.print()
         console.print("[dim]请输入补充信息（可以分段回答）：[/dim]")
-        console.print("[dim]（输入空行结束。如果确实不清楚，可以回答「不确定」来跳过）[/dim]")
+        console.print("[dim]（输入空行结束。超时 5 分钟自动跳过，状态已保存可随时 /resume）[/dim]")
 
-        lines = []
-        while True:
-            try:
-                line = input()
-                if line.strip() == "":
+        def _collect() -> str:
+            lines = []
+            while True:
+                try:
+                    line = input()
+                    if line.strip() == "":
+                        break
+                    lines.append(line)
+                except EOFError:
                     break
-                lines.append(line)
-            except EOFError:
-                break
+            return "\n".join(lines)
 
-        answer = "\n".join(lines) if lines else ""
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_collect)
+                answer = future.result(timeout=300)  # 5 分钟超时
+        except FuturesTimeout:
+            console.print("\n[yellow]⏰ 已超时（5 分钟），自动跳过，状态已保存[/yellow]")
+            answer = "（候选人 5 分钟未响应）"
+        except KeyboardInterrupt:
+            answer = "（候选人手动跳过）"
+
+        answer = answer.strip()
         if not answer:
             answer = "此项不确定，请 AI 给出默认建议"
 

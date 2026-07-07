@@ -1,7 +1,6 @@
 """简历审查员 Agent — 检查优化后简历的真实性、ATS 兼容性、措辞质量。
 
-这是求职辅导工作流的第三步，审查简历优化师输出的简历，
-发现问题后打回修正，最多 3 轮。
+审查结果作为风险提示附在报告中，不自动修正。
 """
 
 from __future__ import annotations
@@ -13,22 +12,18 @@ from pydantic import BaseModel, Field
 
 
 class ResumeReviewResult(BaseModel):
-    """简历审查员的结构化输出。"""
+    """简历审查员的结构化输出 —— 审查不循环，结果作为风险提示附在报告中。"""
 
-    passed: bool = Field(description="简历是否通过审查")
+    # ↓ 拼入 review_feedback → state["review_feedback"] → 模板渲染风险提示 + full_report 第二章
     issues: list[str] = Field(
         default_factory=list,
         description="发现的问题列表（每项注明具体位置和问题）",
     )
+
+    # ↓ 拼入 review_feedback → 同上
     suggestions: list[str] = Field(
         default_factory=list,
         description="修改建议列表（每条具体可执行）",
-    )
-    score: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="简历质量评分（0.0-1.0）",
     )
 
 
@@ -75,17 +70,9 @@ class ResumeReviewerAgent:
 - 每条经历是否包含：情境（可选）、任务（可选）、行动（必须）、结果（必须）
 - 结果是否量化？
 
-## 评分标准
-- 9-10分（0.9-1.0）：简历优秀，可直接投递
-- 7-8分（0.7-0.89）：良好，有小问题需修正
-- 5-6分（0.5-0.69）：有明显问题，需修订
-- 1-4分（0.0-0.49）：严重不足，需重新优化
-
 ## 输出格式
-- passed: 是否通过审查（score >= 0.7 且无 critical issues）
-- issues: 发现的问题列表
-- suggestions: 具体的修改建议
-- score: 质量评分（0.0-1.0）"""
+- issues: 发现的问题列表（每项注明具体位置和问题）
+- suggestions: 具体的修改建议（每条可执行、可直接用于修改）"""
 
     HUMAN_TEMPLATE = """请审查以下优化后的简历。
 
@@ -95,7 +82,7 @@ class ResumeReviewerAgent:
 ## 优化后的简历
 {architecture}
 
-请逐项审查并输出JSON结果。要严格但建设性。"""
+请逐项审查，输出 issues（问题）和 suggestions（建议）。要严格但建设性。"""
 
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
@@ -114,8 +101,8 @@ class ResumeReviewerAgent:
         logger.info("ResumeReviewerAgent reviewing")
         result = self._call_llm(human_prompt)
         logger.info(
-            f"ResumeReviewerAgent: passed={result.passed}, "
-            f"score={result.score:.2f}, issues={len(result.issues)}"
+            f"ResumeReviewerAgent: issues={len(result.issues)}, "
+            f"suggestions={len(result.suggestions)}"
         )
         return result
 
