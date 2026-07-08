@@ -1,4 +1,4 @@
-"""求职策略 Agent — 生成能力差距分析与提升建议。"""
+"""求职策略 Agent — 生成能力差距分析与提升建议。growth_plan，能力差距分析与提升建议"""
 
 from __future__ import annotations
 

@@ -7,7 +7,7 @@ class AgentState(TypedDict):
     """LangGraph workflow state — 所有节点共享的中央状态。"""
 
     # 求职顾问阶段
-    raw_requirement: str                # 简历原文，不变architect,prompt需要原始DJ从这获取
+    raw_requirement: str                # 简历原文，不变architect_node ,prompt_node需要原始DJ从这获取
     # 初始：简历 + JD 原文
     # 追问时：被 human_node 追加你的回答,
     # 分析后：被 requirement_node 覆盖为 LLM 提炼的"候选人画像"
@@ -20,6 +20,7 @@ class AgentState(TypedDict):
     missing_info: list[dict[str, str]]  # 差距列表，给优化师参考
     completeness_score: float           # 匹配度 0-1
     is_complete: bool                   # 信息是否完整
+    previous_questions: str             # 历史已问问题（累加，防重复提问）
 
     # 简历优化阶段
     architecture: dict[str, str]        # 优化后简历各部分
@@ -44,6 +45,7 @@ def create_initial_state(raw_requirement: str) -> AgentState:
         missing_info=[],
         completeness_score=0.0,
         is_complete=False,
+        previous_questions="",
         architecture={},
         review_feedback="",
         growth_plan="",

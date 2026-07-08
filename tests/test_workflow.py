@@ -10,7 +10,6 @@ from app.graph.state import AgentState, create_initial_state
 from app.graph.router import (
     route_after_human,
     route_after_requirement,
-    route_after_review,
 )
 
 
@@ -78,11 +77,6 @@ class TestRouter:
         state = create_initial_state("test")
         result = route_after_human(state)
         assert result == "requirement_node"
-
-    def test_route_after_review_always_prompt(self):
-        """Review always proceeds to prompt_node (no revision loop)."""
-        state = create_initial_state("test")
-        assert route_after_review(state) == "prompt_node"
 
 
 class TestWorkflow:

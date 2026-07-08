@@ -46,7 +46,3 @@ def route_after_human(state: AgentState) -> str:
     return "requirement_node"
 
 
-def route_after_review(state: AgentState) -> str:
-    """审查完成后进入求职策略，审查结果作为风险提示附在报告中。"""
-    logger.info("[router] Review done, proceeding to prompt")
-    return "prompt_node"

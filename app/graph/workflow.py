@@ -22,7 +22,6 @@ from app.graph.nodes import (
 from app.graph.router import (
     route_after_human,
     route_after_requirement,
-    route_after_review,
 )
 from app.graph.state import AgentState
 
@@ -66,12 +65,9 @@ def create_workflow(
         {"requirement_node": "requirement_node", "architect_node": "architect_node"},
     )
 
-    # Architect → review → prompt → export (审查一次，不循环)
+    # Architect → review → prompt → export
     workflow.add_edge("architect_node", "review_node")
-    workflow.add_conditional_edges(
-        "review_node", route_after_review,
-        {"prompt_node": "prompt_node"},
-    )
+    workflow.add_edge("review_node", "prompt_node")
     workflow.add_edge("prompt_node", "export_node")
     workflow.add_edge("export_node", END)
 

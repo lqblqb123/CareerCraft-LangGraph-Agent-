@@ -60,24 +60,14 @@ def requirement_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
 
     rounds = state.get("question_rounds", 0)
     raw = state.get("raw_requirement", "")
+    # 取完整 requirement（含历史回答），Agent 需要看到最新上下文
     requirement = state.get("requirement", raw)
-    # 提取所有历史已问问题
-    all_previous = state.get("_previous_questions", "")
-    current_round_q = ""
-    if "## 上一轮已问过的问题" in requirement:
-        parts = requirement.split("## 上一轮已问过的问题")
-        q_text = parts[1].split("## 候选人回答")[0] if "## 候选人回答" in parts[1] else parts[1]
-        current_round_q = q_text.strip()
-        requirement = parts[0].strip()
-        # 累加：历史问题 + 本轮问题
-        if current_round_q:
-            all_previous = (all_previous + "\n" + current_round_q).strip() if all_previous else current_round_q
 
     result = agent.invoke(
         raw_requirement=raw,
         requirement=requirement,
         rounds_count=rounds,
-        previous_questions=all_previous,
+        previous_questions=state.get("previous_questions", ""),
     )
 
     # Build ranking summary if multiple JDs
@@ -137,21 +127,66 @@ def human_node(state: AgentState) -> dict[str, Any]:
         answers = str(user_response)
 
     current_requirement = state.get("requirement", "")
-    asked = "\n".join(f"- {q}" for q in questions) if questions else "（无）"
+    asked = "\n".join(f"- {q}" for q in questions) if questions else ""
     updated_requirement = (
-        f"{current_requirement}\n\n"
-        f"## 上一轮已问过的问题（严禁重复提问）\n{asked}\n\n"
-        f"## 候选人回答\n{answers}"
+        f"{current_requirement}\n\n## 候选人回答\n{answers}"
     )
+
+    # 将本轮问题累加到历史问题池
+    prev = state.get("previous_questions", "")
+    if asked:
+        tag = f"第{state.get('question_rounds', 0) + 1}轮:\n{asked}"
+        new_prev = (prev + "\n\n" + tag).strip() if prev else tag
+    else:
+        new_prev = prev
 
     logger.info("[human_node] Received candidate response, resuming workflow")
 
     return {
         "requirement": updated_requirement,
+        "previous_questions": new_prev,
         "questions": [],
         "question_rounds": state.get("question_rounds", 0) + 1,
         "status": "HUMAN_INPUT_RECEIVED",
     }
+
+
+def _extract_education(raw_text: str) -> str:
+    """从原始简历中直接提取教育背景，不经过 LLM。
+
+    用常见关键词（学校/学院/大学/学历/专业/毕业）匹配相关行，
+    避免 LLM 篡改日期、校名等硬数据。
+    """
+    import re
+
+    resume_part = raw_text.split("## 目标岗位描述")[0] if "## 目标岗位描述" in raw_text else raw_text
+    resume_part = resume_part.replace("## 候选人简历\n", "").strip()
+
+    lines = resume_part.split("\n")
+    edu_lines = []
+    capturing = False
+    edu_keywords = ["教育", "学历", "学校", "大学", "学院", "毕业", "专业", "本科", "硕士", "博士", "专科", "学位"]
+
+    for line in lines:
+        line_stripped = line.strip()
+        if not line_stripped:
+            if capturing:
+                break  # 空行结束教育模块
+            continue
+        # 检测教育模块开头
+        if any(kw in line_stripped for kw in edu_keywords):
+            capturing = True
+        if capturing:
+            edu_lines.append(line_stripped)
+
+    if edu_lines:
+        return "\n".join(edu_lines)
+
+    # Fallback: 查找包含教育关键词的行
+    for line in lines:
+        if any(kw in line.strip() for kw in edu_keywords):
+            edu_lines.append(line.strip())
+    return "\n".join(edu_lines) if edu_lines else "（未从简历中识别到教育背景）"
 
 
 def _validate_hard_data(raw_text: str, optimized: dict[str, str]) -> list[str]:
@@ -226,7 +261,7 @@ def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
         "personal_summary": result.personal_summary,
         "skills_matrix": result.skills_matrix,
         "work_experience": result.work_experience,
-        "education": result.education,
+        "education": _extract_education(raw_requirement),
         "additional_highlights": result.additional_highlights,
     }
 
@@ -267,15 +302,10 @@ def review_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
         architecture=architecture,
     )
 
-    feedback_text = "\n".join(
-        [f"- 问题: {i}" for i in result.issues]
-        + [f"- 建议: {s}" for s in result.suggestions]
-    )
-
-    logger.info(f"[review_node] issues={len(result.issues)}, suggestions={len(result.suggestions)}")
+    logger.info(f"[review_node] feedback={len(result.feedback)} chars")
 
     return {
-        "review_feedback": feedback_text,
+        "review_feedback": result.feedback,
         "status": "REVIEWED",
     }
 

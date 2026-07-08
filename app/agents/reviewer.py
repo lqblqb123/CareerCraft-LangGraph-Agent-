@@ -14,16 +14,10 @@ from pydantic import BaseModel, Field
 class ResumeReviewResult(BaseModel):
     """简历审查员的结构化输出 —— 审查不循环，结果作为风险提示附在报告中。"""
 
-    # ↓ 拼入 review_feedback → state["review_feedback"] → 模板渲染风险提示 + full_report 第二章
-    issues: list[str] = Field(
-        default_factory=list,
-        description="发现的问题列表（每项注明具体位置和问题）",
-    )
-
-    # ↓ 拼入 review_feedback → 同上
-    suggestions: list[str] = Field(
-        default_factory=list,
-        description="修改建议列表（每条具体可执行）",
+    # ↓ 直接写入 state["review_feedback"] → 模板渲染风险提示 + full_report 第二章
+    feedback: str = Field(
+        default="",
+        description="审查反馈文本，包含发现的问题和修改建议（Markdown 格式）",
     )
 
 
@@ -71,8 +65,7 @@ class ResumeReviewerAgent:
 - 结果是否量化？
 
 ## 输出格式
-- issues: 发现的问题列表（每项注明具体位置和问题）
-- suggestions: 具体的修改建议（每条可执行、可直接用于修改）"""
+- feedback: 审查反馈文本，包含发现的问题和修改建议（Markdown 格式，每条一行）"""
 
     HUMAN_TEMPLATE = """请审查以下优化后的简历。
 
@@ -82,7 +75,7 @@ class ResumeReviewerAgent:
 ## 优化后的简历
 {architecture}
 
-请逐项审查，输出 issues（问题）和 suggestions（建议）。要严格但建设性。"""
+请逐项审查，输出 feedback（问题和建议的 Markdown 文本）。要严格但建设性。"""
 
     def __init__(self, llm: BaseChatModel):
         self.llm = llm
@@ -100,10 +93,7 @@ class ResumeReviewerAgent:
 
         logger.info("ResumeReviewerAgent reviewing")
         result = self._call_llm(human_prompt)
-        logger.info(
-            f"ResumeReviewerAgent: issues={len(result.issues)}, "
-            f"suggestions={len(result.suggestions)}"
-        )
+        logger.info(f"ResumeReviewerAgent: feedback={len(result.feedback)} chars")
         return result
 
     def _call_llm(self, human_prompt: str) -> ResumeReviewResult:

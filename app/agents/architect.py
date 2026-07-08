@@ -33,9 +33,6 @@ class ResumeResult(BaseModel):
         description="工作/项目经历（每段 2-4 条 STAR 要点，动词开头 + 量化数据）",
     )
 
-    # ↓ architecture["education"] → full_report.md 第一章，强制逐字照抄不修改
-    education: str = Field(default="", description="教育背景（必须照抄原文，不改任何信息）")
-
     # ↓ architecture["additional_highlights"] → full_report.md 第一章
     additional_highlights: str = Field(
         default="",
@@ -78,8 +75,7 @@ class ResumeOptimizerAgent:
 3. **work_experience**：每段经历格式——
    - 公司/项目名 | 时间段 | 角色
    - 2-4 个 STAR 要点，每个以动词开头，包含量化数据
-4. **education**：教育背景，**必须逐字照抄候选人画像中的原文**，不得修改学校名、专业名、日期格式、学历层次等任何信息
-5. **additional_highlights**：开源贡献、技术博客、证书、奖项等"""
+4. **additional_highlights**：开源贡献、技术博客、证书、奖项等"""
 
     HUMAN_TEMPLATE = """请基于以下信息生成优化后的简历。
 
