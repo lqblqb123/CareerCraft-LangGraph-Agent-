@@ -128,8 +128,10 @@ def human_node(state: AgentState) -> dict[str, Any]:
 
     current_requirement = state.get("requirement", "")
     asked = "\n".join(f"- {q}" for q in questions) if questions else ""
+    # 问题+答案一起追加，避免"是/对"等简短回答脱离上下文
+    qa_text = f"问: {'; '.join(questions)}\n答: {answers}" if questions else f"答: {answers}"
     updated_requirement = (
-        f"{current_requirement}\n\n## 候选人回答\n{answers}"
+        f"{current_requirement}\n\n## 本轮问答\n{qa_text}"
     )
 
     # 将本轮问题累加到历史问题池
