@@ -75,7 +75,6 @@ class MarkdownExporter:
             "personal_summary": arch.get("personal_summary", ""),
             "skills_matrix": arch.get("skills_matrix", ""),
             "work_experience": arch.get("work_experience", ""),
-            "education": arch.get("education", ""),
             "additional_highlights": arch.get("additional_highlights", ""),
             "review_feedback": state.get("review_feedback", ""),
             "growth_plan": state.get("growth_plan", ""),

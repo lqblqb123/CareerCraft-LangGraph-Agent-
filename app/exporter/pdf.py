@@ -51,10 +51,6 @@ def export_resume_pdf(state: dict[str, Any], output_path: str) -> str:
             _write_heading(pdf, "工作 / 项目经历")
             _write_body(pdf, experience)
 
-        education = arch.get("education", "")
-        if education:
-            _write_heading(pdf, "教育背景")
-            _write_body(pdf, education)
 
         highlights = arch.get("additional_highlights", "")
         if highlights:

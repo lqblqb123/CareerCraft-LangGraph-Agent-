@@ -31,7 +31,6 @@ def _format_resume(state: AgentState, default: str = "") -> str:
         "personal_summary": "个人摘要",
         "skills_matrix": "技能矩阵",
         "work_experience": "工作/项目经历",
-        "education": "教育背景",
         "additional_highlights": "附加亮点",
     }
     for key, value in arch.items():
@@ -153,44 +152,6 @@ def human_node(state: AgentState) -> dict[str, Any]:
     }
 
 
-def _extract_education(raw_text: str) -> str:
-    """从原始简历中直接提取教育背景，不经过 LLM。
-
-    用常见关键词（学校/学院/大学/学历/专业/毕业）匹配相关行，
-    避免 LLM 篡改日期、校名等硬数据。
-    """
-    import re
-
-    resume_part = raw_text.split("## 目标岗位描述")[0] if "## 目标岗位描述" in raw_text else raw_text
-    resume_part = resume_part.replace("## 候选人简历\n", "").strip()
-
-    lines = resume_part.split("\n")
-    edu_lines = []
-    capturing = False
-    edu_keywords = ["教育", "学历", "学校", "大学", "学院", "毕业", "专业", "本科", "硕士", "博士", "专科", "学位"]
-
-    for line in lines:
-        line_stripped = line.strip()
-        if not line_stripped:
-            if capturing:
-                break  # 空行结束教育模块
-            continue
-        # 检测教育模块开头
-        if any(kw in line_stripped for kw in edu_keywords):
-            capturing = True
-        if capturing:
-            edu_lines.append(line_stripped)
-
-    if edu_lines:
-        return "\n".join(edu_lines)
-
-    # Fallback: 查找包含教育关键词的行
-    for line in lines:
-        if any(kw in line.strip() for kw in edu_keywords):
-            edu_lines.append(line.strip())
-    return "\n".join(edu_lines) if edu_lines else "（未从简历中识别到教育背景）"
-
-
 def _validate_hard_data(raw_text: str, optimized: dict[str, str]) -> list[str]:
     """验证优化后简历中的硬数据是否与原始一致。
 
@@ -223,8 +184,6 @@ def _validate_hard_data(raw_text: str, optimized: dict[str, str]) -> list[str]:
 
     # 4. 电话校验
     phones = re.findall(r"1[3-9]\d{9}", resume_part)
-    original_entities.update(phones)
-
     # 拼接所有优化后文本
     optimized_text = " ".join(optimized.values())
 
@@ -248,10 +207,10 @@ def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
     raw_requirement = state.get("raw_requirement", "")
     missing_info = state.get("missing_info", [])
 
-    extra_info = raw_requirement
+    extra_info = f"原始输入（含简历+JD）:\n{raw_requirement}"
     if missing_info:
         gaps_text = json.dumps(missing_info, ensure_ascii=False, indent=2)
-        extra_info = f"目标岗位 JD:\n{raw_requirement}\n\n识别到的差距:\n{gaps_text}"
+        extra_info = f"原始输入（含简历+JD）:\n{raw_requirement}\n\n识别到的差距:\n{gaps_text}"
 
     result = agent.invoke(
         requirement=requirement,
@@ -263,7 +222,6 @@ def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
         "personal_summary": result.personal_summary,
         "skills_matrix": result.skills_matrix,
         "work_experience": result.work_experience,
-        "education": _extract_education(raw_requirement),
         "additional_highlights": result.additional_highlights,
     }
 
