@@ -182,8 +182,8 @@ def _validate_hard_data(raw_text: str, optimized: dict[str, str]) -> list[str]:
     emails = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", resume_part)
     original_entities.update(emails)
 
-    # 4. 电话校验
-    phones = re.findall(r"1[3-9]\d{9}", resume_part)
+    original_entities.update(re.findall(r"1[3-9]\d{9}", resume_part))
+
     # 拼接所有优化后文本
     optimized_text = " ".join(optimized.values())
 
@@ -230,6 +230,7 @@ def architect_node(state: AgentState, *, llm: Any = None) -> dict[str, Any]:
     if hard_data_warnings:
         for w in hard_data_warnings:
             logger.warning(f"[optimizer_node] 硬数据校验失败: {w}")
+        architecture["hard_data_warnings"] = "\n".join(f"- {w}" for w in hard_data_warnings)
 
     logger.info("[optimizer_node] Resume optimized"
                 + (f" (硬数据告警: {len(hard_data_warnings)} 处)" if hard_data_warnings else ""))

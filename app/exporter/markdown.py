@@ -77,6 +77,7 @@ class MarkdownExporter:
             "work_experience": arch.get("work_experience", ""),
             "additional_highlights": arch.get("additional_highlights", ""),
             "review_feedback": state.get("review_feedback", ""),
+            "hard_data_warnings": arch.get("hard_data_warnings", ""),
             "growth_plan": state.get("growth_plan", ""),
         }
 

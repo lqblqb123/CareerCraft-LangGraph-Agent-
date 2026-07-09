@@ -297,10 +297,10 @@ def _start_new_session(input_text: str, workflow: Any) -> None:
             break
         jd_lines.append(line)
 
-    jd_raw = "\n".join(jd_lines) if jd_lines else "通用软件开发岗位"
-    jd = read_input(jd_raw)
+    jd_list = [read_input(line.strip()) for line in jd_lines] if jd_lines else ["通用软件开发岗位"]
+    jd_combined = _combine_jds(jd_list)
 
-    full_input = f"## 候选人简历\n{resume_text}\n\n## 目标岗位描述\n{jd}"
+    full_input = f"## 候选人简历\n{resume_text}\n\n{jd_combined}"
     _run_career_workflow(full_input, workflow)
 
 
