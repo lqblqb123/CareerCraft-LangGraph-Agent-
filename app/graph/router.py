@@ -25,7 +25,7 @@ def route_after_requirement(state: AgentState) -> str:
         return "architect_node"
 
     # Agent 认为不完整 + 有问题 + 评分不够 → 继续追问
-    if not is_complete and questions and completeness < 0.6:
+    if not is_complete and questions and completeness < 0.7:
         logger.info(
             f"[router] Need clarification: round={question_rounds + 1}, "
             f"completeness={completeness:.2f}, questions={len(questions)}"
