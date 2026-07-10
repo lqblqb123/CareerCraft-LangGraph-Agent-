@@ -444,14 +444,20 @@ def _display_node_progress(node_name: str, output: dict[str, Any]) -> None:
         score = output.get("completeness_score", 0)
         is_complete = output.get("is_complete", False)
         questions = output.get("questions", [])
-        # Check requirement text for multi-JD ranking
         req_text = output.get("requirement", "")
         jd_count = req_text.count("匹配度:") if req_text else 0
 
         status_text = f"  {icon} {msg} — 匹配度: [cyan]{score:.0%}[/cyan]"
         if jd_count > 1:
             status_text += f" | [dim]{jd_count} 个 JD 已排名[/dim]"
-        status_text += " " + ("[green]✓ 已完整[/green]" if is_complete else f"[yellow]待补充 ({len(questions)} 个问题)[/yellow]")
+
+        if is_complete or score >= 0.7:
+            tag = "[green]✓ 已完整[/green]"
+        elif questions:
+            tag = f"[yellow]待补充 ({len(questions)} 个问题)[/yellow]"
+        else:
+            tag = "[green]✓ 已完整[/green]"
+        status_text += " " + tag
         console.print(status_text)
     elif node_name == "review_node":
         console.print(f"  {icon} {msg}")
