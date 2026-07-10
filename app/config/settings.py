@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     llm_model: str = "qwen-plus"
     llm_api_key: str = ""
     llm_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    llm_temperature: float = 0.3
+    llm_temperature: float = 0.1
     llm_max_tokens: int = 16384
 
     # --- Qwen-specific ---
